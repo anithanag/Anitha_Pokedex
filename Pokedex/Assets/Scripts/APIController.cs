@@ -9,17 +9,19 @@ using TMPro;
 public class APIController : MonoBehaviour
 {
     public RawImage imageSprite;
-    public TextMeshProUGUI p_name, p_number;
+    public TextMeshProUGUI p_name, p_height;
     public TextMeshProUGUI[] typesArray;
-
-    readonly string baseURL = " https://pokeapi.co/api/v2/";
+    public string[] p_characters;
+    string characterName;
+    readonly string baseURL = "https://pokeapi.co/api/v2/";
 
     // Start is called before the first frame update
     void Start()
     {
+        
         imageSprite.texture = Texture2D.blackTexture;
         p_name.text = "";
-        p_number.text = "";
+        p_height.text = "";
 
         foreach(TextMeshProUGUI typesArrayText in typesArray)
         {
@@ -29,23 +31,25 @@ public class APIController : MonoBehaviour
 
     public void RandomCardPicker()
     {
-        int randomIndex = Random.Range(1, 808);
+        int randomIndex = Random.Range(0, 4);
 
         imageSprite.texture = Texture2D.blackTexture;
         p_name.text = "Loading...";
-        p_number.text = "#" + randomIndex;
+        p_height.text = "Loading...";
 
         foreach(TextMeshProUGUI typesArrayText in typesArray)
         {
             typesArrayText.text = "";
         }
-        StartCoroutine(GetIndexCard(randomIndex));
+        characterName = p_characters[randomIndex];
+        StartCoroutine(GetCardDetails(characterName));
 
     }
 
-    IEnumerator GetIndexCard(int i)
+    IEnumerator GetCardDetails(string i)
     {
-        string mainURL = baseURL + "pokemon/" + i.ToString();
+       
+        string mainURL = baseURL + "pokemon/" + i;
 
         UnityWebRequest req = UnityWebRequest.Get(mainURL);
         yield return req.SendWebRequest();
@@ -58,19 +62,21 @@ public class APIController : MonoBehaviour
 
         JSONNode info = JSON.Parse(req.downloadHandler.text);
 
+        //Fetching details of character
         string nameP = info["name"];
+        string heightP = info["height"];
         string spriteURL = info["sprites"]["front_default"];
 
-        JSONNode p_Types = info["types"];
+        JSONNode p_Types = info["abilities"];
         string[] p_TypesName = new string[p_Types.Count];
 
-        for(int k=0, j = p_Types.Count - 1; k< p_Types.Count; k++, j--)
+        for (int k = 0, j = p_Types.Count - 1; k < p_Types.Count; k++, j--)
         {
-            p_TypesName[j] = p_Types[k]["type"]["name"];
+            p_TypesName[j] = p_Types[k]["ability"]["name"];
+            Debug.Log("p_TypesName[j] - " + p_TypesName[j]);
         }
 
         //Sprite
-
         UnityWebRequest spriteReq = UnityWebRequestTexture.GetTexture(spriteURL);
         yield return spriteReq.SendWebRequest();
 
@@ -81,25 +87,22 @@ public class APIController : MonoBehaviour
         }
 
         //UI
-        imageSprite.texture = DownloadHandlerTexture.GetContent(spriteReq);
-        imageSprite.texture.filterMode = FilterMode.Point;
+        Texture2D t = DownloadHandlerTexture.GetContent(spriteReq);
+        imageSprite.texture = t;
+        
 
-        p_name.text = FirstLetter(nameP);
+        p_name.text = nameP;
+        p_height.text = heightP;
 
-        for(int k =0; k< p_TypesName.Length; k++)
+        for (int k = 0; k < p_TypesName.Length; k++)
         {
-            typesArray[k].text = FirstLetter(p_TypesName[k]);
+            typesArray[k].text = p_TypesName[k];
 
         }
     }
 
-    string FirstLetter(string s)
-    {
-        return char.ToUpper(s[0]) + s.Substring(1);
-    }
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+   public void MannualCharacter(string cName)
+   {
+        StartCoroutine(GetCardDetails(cName));
+   }
 }
